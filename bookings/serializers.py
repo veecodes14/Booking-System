@@ -21,12 +21,12 @@ class AvailabilityRuleSerialicer(serializers.ModelSerializer):
         model = AvailabilityRule
         fields = ['id', 'provider', 'day_of_week', 'start_time', 'end_time', 'is_active']
 
-class Blackout(serializers.ModelSerializer):
+class BlackoutSerilizer(serializers.ModelSerializer):
     class Meta:
         model = Blackout
         fields = ['id', 'provider', 'start_datetime', 'end_datetime', 'reason']
 
-class Booking(serializers.ModelSerializer):
+class BookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
         fields = ['id', 'customer', 'provider', 'service', 'start_datetime_utc', 'end_datetime_utc', 'price_snapshot', 'status', 'notes']
