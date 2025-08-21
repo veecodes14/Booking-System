@@ -36,6 +36,8 @@ class Service(models.Model):
     duration_minutes = models.PositiveIntegerField(default=60)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     category = models.CharField(max_length=50, blank=True, null=True)
+    capacity = models.PositiveIntegerField(default=1)  # Number of bookings allowed at the same time
+    is_active = models.BooleanField(default=True)
     buffer_before = models.PositiveIntegerField(default=0) 
     buffer_after = models.PositiveIntegerField(default=0)
 
@@ -86,3 +88,95 @@ class Booking(models.Model):
         ('completed', 'Completed'),
     ], default='pending')
     notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)   # when booking made
+    updated_at = models.DateTimeField(auto_now=True)       # auto-updates on save
+
+    def __str__(self):
+        return f"Booking {self.id} - {self.customer.user.username} with {self.provider.display_name} on {self.start_datetime_utc}"
+
+class Payment(models.Model):
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE)
+    amount = models.ForeignKey(Service, on_delete=models.CASCADE)
+    currency = models.CharField(max_length=10, default='USD', choices=[
+        ('GHS', 'Ghana Cedi'),
+        ('USD', 'US Dollar'),
+        ('EUR', 'Euro'),
+        ('GBP', 'British Pound'),
+
+    ])
+    status = models.CharField(max_length=10, choices=[
+        ('initiated', 'Initiated'),
+        ('succeeded', 'Succeeded'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+    ])
+    provider = models.CharField(max_length=15, choices=[
+        ('paystack', 'Paystack'),
+        ('momo', 'Momo')
+        ('t-cash', 'T-Cash')
+    ])
+    transaction_ref = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        return f"Payment for Booking {self.booking.id} - {self.amount} {self.currency} via {self.provider}"
+
+class Review(models.Model):
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE)
+    rating = models.ForeignKey(ServiceProvider, min_digits=1, max_digits=5, default=0)
+    comment = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return f"Review for Booking {self.booking.id} - {self.rating} stars"
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    channel = models.CharField(max_length=15, choices=[
+        ('email', 'Email'),
+        ('sms', 'SMS'),
+        ('push', 'Push')
+    ])
+    template_key = models.CharField(max_length=20)
+    payload = models.JSONField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    is_deleted = models.BooleanField(default=False)
+    is_archived = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Notification for {self.user.username} via {self.channel}"
+    
+class CalendarCredential(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    provider = models.CharField(max_length=20, choices=[
+        ('google', 'Google'),
+        ('outlook', 'Outlook'),
+        ('apple', 'Apple')
+    ])
+    access_token = models.CharField(max_length=255)
+    refresh_token = models.CharField(max_length=255, blank=True, null=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"Calendar Credential for {self.user.username} - {self.provider}"
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+    def refresh(self):
+        # Logic to refresh the access token using the refresh token
+        pass
+
+class CalendarEventLink(models.Model):
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE)
+    calendar_credential = models.ForeignKey(CalendarCredential, on_delete=models.CASCADE)
+    event_id = models.CharField(max_length=255)
+    event_url = models.URLField()
+
+    def __str__(self):
+        return f"Calendar Event Link for Booking {self.booking.id} - {self.event_id}"
+    def create_event(self):
+        # Logic to create a calendar event using the calendar credential
+        pass
+    
+
+
