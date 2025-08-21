@@ -15,6 +15,9 @@ class Users(models.Model):
     address = models.TextField(blank=True, null=True)
     timezone = TimeZoneField(default='UTC')
     role = models.CharField(max_length=10, choices=USER_ROLE, default='customer')
+    google_access_token = models.TextField(null=True, blank=True)
+    google_refresh_token = models.TextField(null=True, blank=True)
+    google_token_expiry = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.user.username
