@@ -1,20 +1,35 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import CustomerProfile, ServiceProvider, Service, AvailabilityRule, Blackout, Booking, Payment, Review, Notification, CalendarCredential, CalendarEventLink
-from .serializers import CustomerProfileSerializer, ServiceProviderSerializer, ServiceSerializer, AvailabilityRuleSerialicer, BlackoutSerilizer, BookingSerializer, PaymentSerializer, ReviewSerializer, NotificationSerializer, CalendarCredentialSerializer, CalendarEventLinkSerializer
-from rest_framework.decorators import api_view
 from django.contrib.auth.decorators import login_required
-from rest_framework.response import Request, Response
-from rest_framework import status, generics, filters
 from django.contrib import messages
 from django.conf import settings
 from django.http import JsonResponse
+
+from .services.service_booking import create_booking
+from bookings.models import Service 
+
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework import status, generics, filters
+from rest_framework.decorators import api_view
+
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-import json
-import os
 
-import os
+import os, json
+
+from .models import (
+    CustomerProfile, ServiceProvider, Service, AvailabilityRule,
+    Blackout, Booking, Payment, Review, Notification, 
+    CalendarCredential, CalendarEventLink)
+
+from .serializers import (
+    CustomerProfileSerializer, ServiceProviderSerializer, ServiceSerializer, 
+    AvailabilityRuleSerializer, BlackoutSerilizer, BookingSerializer, PaymentSerializer, 
+    ReviewSerializer, NotificationSerializer, CalendarCredentialSerializer, CalendarEventLinkSerializer)
+
+
+
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GOOGLE_CLIENT_SECRETS_FILE = os.path.join(BASE_DIR, "client_secret.json")
@@ -49,7 +64,7 @@ def service_provider_list(request, format=None):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-class ServiceProviderListAPIView:
+class ServiceProviderListAPIView(generics.ListCreateAPIView):
     queryset = ServiceProvider.objects.all()
     serializer_class = ServiceProviderSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -82,11 +97,11 @@ def availability_rule(request, format=None):
 
     if request.method == 'GET':
         availability_rule = AvailabilityRule.objects.all()
-        serializer = AvailabilityRuleSerialicer(availability_rule, many=True)
+        serializer = AvailabilityRuleSerializer(availability_rule, many=True)
         return Response(serializer.data)
     
     if request.method == 'POST':
-        serializer = AvailabilityRuleSerialicer(data=request.data)
+        serializer = AvailabilityRuleSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -104,6 +119,22 @@ def blackout(request, format=None):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@login_required
+def create_booking_view(request):
+    if request.method == "POST":
+        service_id = request.POST.get("service_id")
+        start_datetime = request.POST.get("start_datetime")
+        service = Service.objects.get(id=service_id)
+
+        try:
+            booking = create_booking(request.user, service, start_datetime)
+            return redirect("booking_success")
+        except ValueError as e:
+            return render(request, "booking_form.html", {"error": str(e)})
+    else:
+        return render(request, "booking_form.html")
         
 @api_view(['GET', 'POST'])
 def booking_list(request, format=None):
@@ -117,6 +148,30 @@ def booking_list(request, format=None):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+@api_view(['GET', 'PUT', 'DELETE'])
+def booking_detail(request, id, format=None):
+
+    try:
+        booking = Booking.objects.get(pk=id)
+    except Booking.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        serializer = Booking(booking)
+        return Response(serializer.data)
+
+
+    elif request.method == 'PUT':
+        serializer = Booking(booking, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        booking.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
         
 @api_view(['GET', 'POST'])
 def payment_list(request, format=None):
@@ -197,7 +252,7 @@ def google_login(request):
 def google_callback(request):
     code = request.GET.get("code")
     flow = Flow.from_client_secrets_file(
-        GOOGLE_CLIENT_SECRETS_FILE,
+        settings.GOOGLE_CLIENT_SECRETS_FILE,
         scopes=SCOPES,
         redirect_uri="http://127.0.0.1:8000/oauth/callback/"
     )

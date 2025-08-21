@@ -4,6 +4,8 @@ from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.models import User
 from timezone_field import TimeZoneField
+from django.core.validators import MinValueValidator, MaxValueValidator
+
 
 
 class CustomerProfile(models.Model):
@@ -88,7 +90,7 @@ class Booking(models.Model):
         ('completed', 'Completed'),
     ], default='pending')
     notes = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)   # when booking made
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
     updated_at = models.DateTimeField(auto_now=True)       # auto-updates on save
 
     def __str__(self):
@@ -96,7 +98,7 @@ class Booking(models.Model):
 
 class Payment(models.Model):
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE)
-    amount = models.ForeignKey(Service, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=10, default='USD', choices=[
         ('GHS', 'Ghana Cedi'),
         ('USD', 'US Dollar'),
@@ -112,8 +114,8 @@ class Payment(models.Model):
     ])
     provider = models.CharField(max_length=15, choices=[
         ('paystack', 'Paystack'),
-        ('momo', 'Momo')
-        ('t-cash', 'T-Cash')
+        ('momo', 'Momo'),
+        ('t-cash', 'T-Cash'),
     ])
     transaction_ref = models.CharField(max_length=100, blank=True, null=True)
 
@@ -122,7 +124,13 @@ class Payment(models.Model):
 
 class Review(models.Model):
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE)
-    rating = models.ForeignKey(ServiceProvider, min_digits=1, max_digits=5, default=0)
+    rating = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(5)
+        ],
+        default=1
+    )
     comment = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):

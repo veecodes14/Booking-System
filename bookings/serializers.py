@@ -17,7 +17,7 @@ class ServiceSerializer(serializers.ModelSerializer):
         fields = ['id', 'provider', 'title', 'description', 'duration_minutes', 'price', 'category', 'capacity', 'is_active', 'buffer_before', 'buffer_after']
  
 
-class AvailabilityRuleSerialicer(serializers.ModelSerializer):
+class AvailabilityRuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = AvailabilityRule
         fields = ['id', 'provider', 'day_of_week', 'start_time', 'end_time', 'is_active']

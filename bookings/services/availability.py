@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta, time
 from django.utils.timezone import make_aware
-from bookings import AvailabilityRule, Blackout, Booking
+from bookings.models import AvailabilityRule, Blackout, Booking
 
 class AvailabilityService:
 
@@ -74,8 +74,8 @@ class AvailabilityService:
         filtered = []
         for slot in slots:
             overlap = bookings.filter(
-                start_time__lt=slot[1] + timedelta(minutes=service.buffer_after),
-                end_time__gt=slot[0] - timedelta(minutes=service.buffer_before),
+                start_datetime_utc__lt=slot[1] + timedelta(minutes=service.buffer_after),
+                end_datetime_utc__gt=slot[0] - timedelta(minutes=service.buffer_before),
             ).exists()
             if not overlap:
                 filtered.append(slot)
