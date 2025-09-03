@@ -4,7 +4,12 @@ from .models import CustomerProfile, ServiceProvider, Service, AvailabilityRule,
 class CustomerProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerProfile
-        fields=  ['id', 'user', 'created_at', 'updated_at', 'default_location', 'notes']
+        fields = ['id', 'created_at', 'updated_at', 'default_location', 'notes']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        user = self.context['request'].user  # Get user from request
+        return CustomerProfile.objects.create(user=user, **validated_data)
 
 class ServiceProviderSerializer(serializers.ModelSerializer):
     class Meta:

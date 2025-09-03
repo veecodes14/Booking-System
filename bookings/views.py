@@ -10,7 +10,8 @@ from bookings.models import Service
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status, generics, filters
-from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
 
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
@@ -37,6 +38,7 @@ SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
 
 @api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def customer_profile_list(request, format=None):
 
     if request.method == 'GET':
@@ -45,10 +47,11 @@ def customer_profile_list(request, format=None):
         return Response(serializer.data)
     
     if request.method == 'POST':
-        serializer = CustomerProfileSerializer(data=request.data)
+        serializer = CustomerProfileSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
 @api_view(['GET', 'POST'])
 def service_provider_list(request, format=None):

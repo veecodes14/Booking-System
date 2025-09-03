@@ -12,9 +12,9 @@ from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import AllowAny
 
 
+@api_view(['POST'])
 @authentication_classes([])  # disables session auth (and CSRF)
 @permission_classes([AllowAny])
-@api_view(['POST'])
 def register(request):
     username = request.data.get('username')
     password = request.data.get('password')
@@ -39,9 +39,9 @@ def register(request):
     return Response({'message': f'{role.capitalize()} user created successfully'}, status=201)
 
 
+@api_view(['POST'])
 @authentication_classes([])  # disables session auth (and CSRF)
 @permission_classes([AllowAny])
-@api_view(['POST'])
 def login_customer(request):
     # same as above, but check role
     user = authenticate(username=request.data.get('username'), password=request.data.get('password'))
@@ -51,9 +51,9 @@ def login_customer(request):
     return Response({"error": "Invalid credentials or not a customer"}, status=401)
 
 
+@api_view(['POST'])
 @authentication_classes([])  # disables session auth (and CSRF)
 @permission_classes([AllowAny])
-@api_view(['POST'])
 def login_provider(request):
     user = authenticate(username=request.data.get('username'), password=request.data.get('password'))
     if user and hasattr(user, 'serviceprovider'):
